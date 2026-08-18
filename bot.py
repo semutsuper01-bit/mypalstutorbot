@@ -4,17 +4,12 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from anthropic import Anthropic
 
-# Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Inisialisasi Anthropic client
 client = Anthropic()
-
-# Conversation history per user
 user_conversations = {}
 
-# System prompt
 SYSTEM_PROMPT = """You are a friendly and fun P6 tutor for students using "My Pals Are Here 3rd Edition" textbook.
 
 Your expertise:
@@ -29,7 +24,6 @@ Rules:
 3. If asked for questions, provide 3 sets: Easy, Medium, Hard
 4. Focus only on topics from "My Pals Are Here 3rd Edition"
 5. Keep responses engaging and age-appropriate for P6 students
-6. If asked to reset topic, start fresh
 
 When a student asks:
 - "Explain [topic]" → Give detailed, fun explanation with examples
@@ -37,39 +31,34 @@ When a student asks:
 - "Answer [topic]" → Answer their specific question
 - "/reset" → Clear conversation history for that user"""
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle /start command"""
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user_conversations[user_id] = []
     
-    welcome_message = """Hello! I'm your My Pals Tutor Bot! 👋
+    msg = """Hello! I'm your My Pals Tutor Bot! 👋
 
 I can help you with:
-📚 **Mathematics** (P6 level)
-🔬 **Science** (P6 level)
-🇬🇧 **English** (P6 level)
-🇮🇩 **Bahasa Indonesia** (P6 level)
+📚 Mathematics (P6)
+🔬 Science (P6)
+🇬🇧 English (P6)
+🇮🇩 Bahasa Indonesia (P6)
 
-Just type your question or topic, and I'll explain it in a fun way!
-
-Example questions:
+Examples:
 - "Explain fractions"
 - "Give me questions about photosynthesis"
-- "What is a noun?" 
-- "Jelaskan tentang bilangan bulat"
+- "What is a noun?"
+- "Jelaskan bilangan bulat"
 
-Type /reset if you want to start a new topic."""
+Type /reset to start a new topic."""
     
-    await update.message.reply_text(welcome_message)
+    await update.message.reply_text(msg)
 
-async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Reset conversation history for user"""
+async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user_conversations[user_id] = []
     await update.message.reply_text("✅ Conversation reset! Start with a new topic.")
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle user messages"""
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user_message = update.message.text
     
@@ -106,25 +95,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             
     except Exception as e:
         logger.error(f"Error: {e}")
-        await update.message.reply_text(f"⚠️ Error: {str(e)}\n\nPlease try again.")
+        await update.message.reply_text(f"⚠️ Error: {str(e)}")
 
 def main():
-    """Start the bot"""
-    telegram_token = os.getenv('TELEGRAM_BOT_TOKEN')
-    anthropic_key = os.getenv('ANTHROPIC_API_KEY')
-    
-    if not telegram_token or not anthropic_key:
-        logger.error("ERROR: Missing TELEGRAM_BOT_TOKEN or ANTHROPIC_API_KEY")
+    token = os.getenv('TELEGRAM_BOT_TOKEN')
+    if not token:
+        logger.error("Missing TELEGRAM_BOT_TOKEN")
         return
     
-    application = Application.builder().token(telegram_token).build()
-    
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("reset", reset))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app = Application.builder().token(token).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("reset", reset))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
     logger.info("Bot started!")
-    application.run_polling()
+    app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
     main()
