@@ -133,4 +133,10 @@ async def main():
 
 if __name__ == '__main__':
     import asyncio
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except RuntimeError as e:
+        if "Event loop is closed" in str(e):
+            pass
+        else:
+            raise
