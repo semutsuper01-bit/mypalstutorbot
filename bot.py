@@ -10,25 +10,43 @@ logger = logging.getLogger(__name__)
 client = Anthropic()
 user_conversations = {}
 
-SYSTEM_PROMPT = """You are a helpful P6 tutor using "My Pals Are Here 3rd Edition".
+SYSTEM_PROMPT = "You are a helpful P6 tutor using My Pals Are Here 3rd Edition textbook. Answer in the SAME language the student uses (Indonesian or English). Topics: Math, Science, English, Bahasa Indonesia. Be fun, simple, and encouraging. When asked for questions, provide the exact number requested and mix MULTIPLE CHOICE (A/B/C/D) with SHORT ANSWER questions. Label difficulty levels if asked. Students can ask anything and you should answer flexibly in their preferred format and language."
 
-IMPORTANT: Answer in the SAME language student uses (Indonesian or English).
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    user_conversations[user_id] = []
+    msg = "Hi! I'm your P6 Tutor Bot. Ask me anything about Math, Science, English, or Bahasa Indonesia. You can ask for explanations, questions, or just chat. Type /reset to start fresh."
+    await update.message.reply_text(msg)
 
-Topics: Mathematics, Science, English, Bahasa Indonesia (P6 level).
+async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    user_conversations[user_id] = []
+    await update.message.reply_text("✅ Reset! Start fresh.")
 
-HOW TO HELP:
-1. Answer any P6 question - be fun and simple
-2. For questions: Provide exactly the number they ask for
-3. Mix question types: MULTIPLE CHOICE (A/B/C/D) + SHORT ANSWER questions
-4. Label difficulty: Easy/Medium/Hard
-5. Be conversational, use emojis, encourage learning
-6. Respect student requests for specific formats
-
-Examples student can ask:
-- "Jelaskan tentang fotosintesis" -> Explain in Indonesian
-- "Give me 5 questions about fractions" -> 5 mixed questions
-- "Buat 3 soal: 1 mudah, 2 sulit tentang grammar" -> Create exactly that
-- "What is a noun?" -> Answer normally
-- "Make 10 questions: 5 ABCD choice, 5 short answer" -> Do exactly that
-
-Be flexible. Answer whatever format and language they
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    user_message = update.message.text
+    
+    if user_id not in user_conversations:
+        user_conversations[user_id] = []
+    
+    user_conversations[user_id].append({"role": "user", "content": user_message})
+    await update.message.chat.send_action("typing")
+    
+    try:
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=2048,
+            system=SYSTEM_PROMPT,
+            messages=user_conversations[user_id]
+        )
+        
+        msg = response.content[0].text
+        user_conversations[user_id].append({"role": "assistant", "content": msg})
+        
+        if len(msg) > 4096:
+            for chunk in [msg[i:i+4096] for i in range(0, len(msg), 4096)]:
+                await update.message.reply_text(chunk)
+        else:
+            await update.message.reply_text(msg)
+    except Exception as e:
