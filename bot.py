@@ -27,7 +27,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     response = client.messages.create(
         model="claude-haiku-4-5-20251001",
         max_tokens=500,
-        system="You are a P6 tutor. Answer in the same language student uses.",
+        system="You are a P6 tutor. ALWAYS answer in ENGLISH, even if student asks in Indonesian or other languages. Never respond in any language except English.",
         messages=conversations[user_id]
     )
     
